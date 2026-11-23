@@ -669,9 +669,12 @@ def main():
     user32 = ctypes.WinDLL("user32", use_last_error=True)
     kernel32.CreateMutexW(None, False, "GlyphWallpaper_SingleInstance")
     if ctypes.get_last_error() == 183:      # ERROR_ALREADY_EXISTS
-        hwnd = user32.FindWindowW("TkTopLevel", "Glyph Wallpaper")
+        # уже запущено (возможно, свёрнуто в трей) — показываем окно
+        hwnd = user32.FindWindowW(None, "Glyph Wallpaper")
         if hwnd:
+            user32.ShowWindow(hwnd, 5)      # SW_SHOW
             user32.ShowWindow(hwnd, 9)      # SW_RESTORE
+            user32.BringWindowToTop(hwnd)
             user32.SetForegroundWindow(hwnd)
         return
     try:

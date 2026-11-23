@@ -70,10 +70,22 @@ if (-not $Src) {
     Write-Host "No build found: $Name.exe is missing." -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Option 1: download GlyphWallpaper-win64.zip from Releases,"
-    Write-Host "          extract it and run Install.bat from that folder."
+    Write-Host "          extract it (right click -> Extract All) and run Install.bat"
+    Write-Host "          from the extracted folder, NOT from inside the zip."
     Write-Host "Option 2: build from source:"
     Write-Host "          pip install -r requirements.txt -r requirements-dev.txt"
     Write-Host "          powershell -File scripts\build.ps1"
+    Write-Host ""
+    if (-not $NoLaunch) { Read-Host "Press Enter to close" }
+    exit 1
+}
+
+# запуск прямо из окна архива: рядом нет _internal — программа не стартует
+if (-not (Test-Path (Join-Path $Src "_internal"))) {
+    Write-Host ""
+    Write-Host "This folder looks like an unextracted archive." -ForegroundColor Yellow
+    Write-Host "Right click the zip -> 'Extract All...', then run Install.bat" -ForegroundColor Yellow
+    Write-Host "from the extracted folder." -ForegroundColor Yellow
     Write-Host ""
     if (-not $NoLaunch) { Read-Host "Press Enter to close" }
     exit 1
