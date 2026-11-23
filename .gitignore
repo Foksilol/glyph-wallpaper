@@ -1,0 +1,23 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Local artifacts
+*.log
+config.json
+manifest.json
+
+# Virtual envs
+.venv/
+venv/
+
+# OS junk
+Thumbs.db
+desktop.ini
+.DS_Store
