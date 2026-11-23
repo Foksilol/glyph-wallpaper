@@ -26,12 +26,34 @@ function Remove-Shortcuts {
     }
 }
 
+function Restore-Wallpaper {
+    # при удалении процесс завершается принудительно, поэтому возвращаем
+    # обои пользователя вручную — иначе останется последний кадр анимации
+    Add-Type -Namespace GW -Name Native -ErrorAction SilentlyContinue `
+        -MemberDefinition @'
+[DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, string pvParam, uint fWinIni);
+'@
+    $wp = (Get-ItemProperty "HKCU:\Control Panel\Desktop" -Name Wallpaper `
+            -ErrorAction SilentlyContinue).Wallpaper
+    if ($wp -and (Test-Path $wp)) {
+        [GW.Native]::SystemParametersInfo(0x0014, 0, $wp, 0x0003) | Out-Null
+    }
+}
+
 if ($Uninstall) {
     Stop-App
     Remove-Shortcuts
+    Restore-Wallpaper
     if (Test-Path $Dst) { Remove-Item $Dst -Recurse -Force }
     Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" `
         -Name $Name -ErrorAction SilentlyContinue
+    # настройки (design, seed, автозапуск) — тоже убираем, чтобы переустановка
+    # начиналась с чистого листа
+    $Cfg = Join-Path $env:APPDATA $Name
+    if (Test-Path (Join-Path $Cfg "config.json")) {
+        Remove-Item (Join-Path $Cfg "config.json") -Force
+    }
     Write-Host "Glyph Wallpaper removed." -ForegroundColor Green
     return
 }
