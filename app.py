@@ -99,7 +99,30 @@ def autostart_enabled():
         return False
 
 
+def _running_from_temp():
+    """Запуск из архива/временной папки (WinRAR, zip-preview): автозапуск ставить нельзя."""
+    exe = os.path.normcase(getattr(sys, "executable", "") or "")
+    return any(mark in exe for mark in
+               ("\\temp\\", "\\tmp\\", "rartemp", "\\appdata\\local\\temp\\"))
+
+
+def clean_stale_autostart():
+    """Убирает автозапись на несуществующий exe (например, после распаковки в Temp)."""
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
+            value, _ = winreg.QueryValueEx(key, RUN_VALUE)
+    except OSError:
+        return
+    path = value.strip().strip('"').split('"')[0].split(" --")[0]
+    if path and not os.path.exists(path):
+        log(f"autostart points to missing file, removing: {path}")
+        set_autostart(False)
+
+
 def set_autostart(enabled):
+    if enabled and getattr(sys, "frozen", False) and _running_from_temp():
+        log("autostart skipped: running from a temporary folder")
+        return False
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0,
                             winreg.KEY_SET_VALUE) as key:
@@ -192,10 +215,13 @@ class App(tk.Tk):
             self.after(1500, self.toggle_live)
         self.protocol("WM_DELETE_WINDOW", self.hide_to_tray)
 
+        clean_stale_autostart()      # запись на удалённый exe больше не нужна
+
         if not cfg.get("autostart_set"):
-            set_autostart(True)
+            ok = set_autostart(True)
             self.autostart_var.set(autostart_enabled())
-            cfg["autostart_set"] = True
+            if ok:                   # из временной папки не прописываем — попробуем позже
+                cfg["autostart_set"] = True
             save_config(cfg)
         elif self.autostart_var.get():
             set_autostart(True)      # обновляем путь, если переехали/пересобрали
